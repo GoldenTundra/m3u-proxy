@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>M3U Proxy</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; color: #222; }
+      h1 { font-size: 22px; margin: 0 0 12px; }
+      form { display: flex; gap: 8px; }
+      input, select { padding: 8px; font-size: 14px; }
+      input { flex: 1; }
+      button { padding: 8px 14px; font-size: 14px; cursor: pointer; }
+      #status { margin: 8px 0; font-size: 13px; color: #555; white-space: pre-wrap; }
+      #status:empty { margin: 0; }
+      .panel { margin-top: 12px; }
+      h2 { font-size: 13px; margin: 20px 0 8px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+      .hint { font-size: 13px; color: #666; margin: 0 0 10px; }
+
+      /* Setup — collapsed by default since it's set-once. */
+      details.setup { background: #f7f7f7; border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+      details.setup summary { cursor: pointer; color: #444; font-weight: 600; }
+      details.setup p { margin: 8px 0; color: #555; }
+      details.setup h3 { font-size: 12px; margin: 14px 0 0; color: #444; }
+      .source-url { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+      .source-url-label { flex: none; width: 150px; font-size: 12px; color: #777; }
+      .source-url code { flex: 1; padding: 6px 8px; background: white; border: 1px solid #e2e2e2; border-radius: 4px; font-size: 12px; word-break: break-all; }
+      .source-url button { padding: 4px 10px; font-size: 12px; }
+
+      /* Tabs */
+      .tabs { display: flex; gap: 4px; margin-top: 20px; border-bottom: 1px solid #ddd; }
+      .tabs button { border: none; background: none; padding: 8px 14px; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+      .tabs button.active { color: #222; font-weight: 600; border-bottom-color: #222; }
+      .tabs .count { font-size: 11px; color: #888; font-weight: normal; margin-left: 4px; }
+      .panel[hidden] { display: none; }
+
+      table { width: 100%; border-collapse: collapse; }
+      table th { text-align: left; font-size: 12px; color: #777; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid #ccc; }
+      table td { padding: 7px 8px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: middle; }
+      td.chno { color: #666; font-variant-numeric: tabular-nums; width: 40px; }
+      button.remove { border: none; background: none; padding: 4px 8px; color: #999; cursor: pointer; font-size: 14px; }
+      button.remove:hover { color: #b00; }
+      button.remove.edit:hover { color: #222; }
+      td.actions { white-space: nowrap; text-align: right; width: 1%; }
+      .url-edit-row { display: flex; gap: 4px; align-items: center; }
+      .url-edit-row input.url-edit { flex: 1; min-width: 0; padding: 4px 6px; font-size: 13px; }
+      button.small { padding: 4px 8px; font-size: 12px; }
+      .event-url { font-size: 12px; color: #888; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      #favorites td.url { color: #555; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #favorites td.url.editing { overflow: visible; }
+      #favorites td.guide, #favorites td.warm { text-align: center; width: 50px; }
+      #favorites td.warm.ok { color: #2a7a2a; }
+      #favorites td.warm.fail { color: #b00; }
+      th.center { text-align: center; }
+
+      #add-favorite { position: relative; flex-wrap: wrap; }
+      #add-favorite input.title-input { flex: none; width: 180px; }
+      #guide-match { font-size: 12px; color: #2a7a2a; width: 100%; }
+      #guide-suggestions { position: absolute; top: 40px; left: 0; width: 240px; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-height: 220px; overflow-y: auto; z-index: 10; display: none; }
+      .suggestion { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+      .suggestion:hover { background: #f0f0f0; }
+      .suggestion img { width: 20px; height: 20px; object-fit: contain; }
+
+      #add-event { flex-wrap: wrap; }
+      #add-event #event-title { flex: 1 1 60%; }
+      #add-event #event-url { flex: 1 1 200px; }
+      #add-event #event-start { flex: none; }
+      #slots td.slot-name { white-space: nowrap; font-weight: 600; color: #333; width: 130px; }
+      #slots td.empty { color: #999; }
+      #slots td.when { color: #555; white-space: nowrap; }
+      .badge { font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #eee; color: #555; white-space: nowrap; }
+      .badge.live { background: #e6f4e6; color: #2a7a2a; }
+      .badge.pending { background: #fff4e0; color: #9a6200; }
+    </style>
+  </head>
+  <body>
+    <h1>M3U Proxy</h1>
+
+    <details class="setup">
+      <summary>Setup: Channels DVR, Plex, IPTV apps</summary>
+      <h3>Channels DVR / IPTV apps</h3>
+      <p>Add a Custom Channels (M3U) source: the playlist as the M3U URL, and
+        the guide as the XMLTV Guide Data URL.</p>
+      <div class="source-url"><span class="source-url-label">Playlist (M3U URL)</span><code id="playlist-url"></code><button type="button" data-copy="playlist-url">Copy</button></div>
+      <div class="source-url"><span class="source-url-label">Guide (XMLTV URL)</span><code id="guide-url"></code><button type="button" data-copy="guide-url">Copy</button></div>
+      <h3>Plex</h3>
+      <p>Live TV &amp; DVR → Set up → enter the tuner address manually. When asked
+        for a guide, choose the XMLTV option and paste the Plex guide URL.</p>
+      <div class="source-url"><span class="source-url-label">Tuner address</span><code id="hdhr-address"></code><button type="button" data-copy="hdhr-address">Copy</button></div>
+      <div class="source-url"><span class="source-url-label">Plex guide (XMLTV)</span><code id="plex-guide-url"></code><button type="button" data-copy="plex-guide-url">Copy</button></div>
+    </details>
+
+    <nav class="tabs">
+      <button type="button" data-tab="channels">Channels<span class="count" id="channels-count"></span></button>
+      <button type="button" data-tab="events">Live events<span class="count" id="events-count"></span></button>
+    </nav>
+
+    <div id="status"></div>
+
+    <section class="panel" id="panel-channels">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Channel</th>
+            <th>URL</th>
+            <th class="center">Guide</th>
+            <th class="center">Warm</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="favorites"></tbody>
+      </table>
+
+      <h2>Add a channel</h2>
+      <form id="add-favorite" autocomplete="off">
+        <input id="favorite-title-input" class="title-input" type="text" placeholder="Title (e.g. CNN)" />
+        <div id="guide-suggestions"></div>
+        <input id="favorite-url-input" type="text" placeholder="Page URL…" />
+        <button type="submit">Save</button>
+        <div id="guide-match"></div>
+      </form>
+    </section>
+
+    <section class="panel" id="panel-events" hidden>
+      <p class="hint">Three fixed channels (2500–2502) for one-off games. The
+        guide shows "Up next", then the matchup, then clears itself after the game.</p>
+      <table>
+        <tbody id="slots"></tbody>
+      </table>
+
+      <h2>Assign a game</h2>
+      <form id="add-event" autocomplete="off">
+        <select id="event-slot"></select>
+        <input id="event-title" type="text" placeholder="Title (e.g. Hurricanes vs Panthers)" />
+        <input id="event-url" type="text" placeholder="Game page URL…" />
+        <input id="event-start" type="datetime-local" />
+        <select id="event-sport"></select>
+        <button type="submit">Assign</button>
+      </form>
+    </section>
+
+    <script src="./app.js"></script>
+    <script src="./events.js"></script>
+  </body>
+</html>

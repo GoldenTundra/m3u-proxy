@@ -1,0 +1,27 @@
+services:
+  server:
+    build: ./server
+    init: true
+    # Docker's default seccomp profile plus the namespace syscalls Chromium's
+    # sandbox needs (Playwright's official profile). Without it the server
+    # still works, with Chromium's sandbox off (see shared/launchBrowser.ts).
+    security_opt:
+      - seccomp=./server/seccomp_profile.json
+    ports:
+      - "${HOST_PORT:-9090}:8080"
+    environment:
+      - YTDLP_DATA_DIR=/data/bin
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:?Set PUBLIC_BASE_URL in .env (see .env.example)}
+      # Guide text like "Up next: …, 7:00 PM" is rendered server-side.
+      - TZ=${TZ:-America/New_York}
+      # Optional: your Channels DVR server, pinged to re-read the playlist and
+      # guide whenever channels or Live Events change (see
+      # server/src/channels/channelsDvr.ts). Unset = off.
+      - CHANNELS_DVR_URL=${CHANNELS_DVR_URL:-}
+      # Plex / HDHomeRun tuner emulation (see server/src/routes/hdhr.ts).
+      - HDHR_TUNER_COUNT=${HDHR_TUNER_COUNT:-2}
+      - HDHR_FRIENDLY_NAME=${HDHR_FRIENDLY_NAME:-m3u-proxy}
+      - HDHR_DEVICE_ID=${HDHR_DEVICE_ID:-}
+    volumes:
+      - ./volumes/ytdlp-bin:/data/bin
+    restart: unless-stopped

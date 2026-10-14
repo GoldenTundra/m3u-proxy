@@ -3,8 +3,10 @@ services:
     build: ./server
     init: true
     # Docker's default seccomp profile plus the namespace syscalls Chromium's
-    # sandbox needs (Playwright's official profile). Without it the server
-    # still works, with Chromium's sandbox off (see shared/launchBrowser.ts).
+    # sandbox needs (Playwright's official profile, plus faccessat2 and
+    # friends, which runc 1.5+ calls after loading the profile and crashes
+    # without). Without it the server still works, with Chromium's sandbox
+    # off (see shared/launchBrowser.ts).
     security_opt:
       - seccomp=./server/seccomp_profile.json
     ports:

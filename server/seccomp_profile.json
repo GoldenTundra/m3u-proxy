@@ -63,6 +63,17 @@
 			"excludes": {}
 		},
 		{
+			"comment": "ENOSYS, not EPERM, so glibc falls back to clone (as in Docker's default profile)",
+			"names": [
+				"clone3"
+			],
+			"action": "SCMP_ACT_ERRNO",
+			"errnoRet": 38,
+			"args": [],
+			"includes": {},
+			"excludes": {}
+		},
+		{
 			"names": [
 				"accept",
 				"accept4",
@@ -86,6 +97,7 @@
 				"clock_nanosleep",
 				"clock_nanosleep_time64",
 				"close",
+				"close_range",
 				"connect",
 				"copy_file_range",
 				"creat",
@@ -97,6 +109,7 @@
 				"epoll_ctl",
 				"epoll_ctl_old",
 				"epoll_pwait",
+				"epoll_pwait2",
 				"epoll_wait",
 				"epoll_wait_old",
 				"eventfd",
@@ -106,6 +119,7 @@
 				"exit",
 				"exit_group",
 				"faccessat",
+				"faccessat2",
 				"fadvise64",
 				"fadvise64_64",
 				"fallocate",
@@ -113,6 +127,7 @@
 				"fchdir",
 				"fchmod",
 				"fchmodat",
+				"fchmodat2",
 				"fchown",
 				"fchown32",
 				"fchownat",
@@ -241,6 +256,7 @@
 				"_newselect",
 				"open",
 				"openat",
+				"openat2",
 				"pause",
 				"pipe",
 				"pipe2",
